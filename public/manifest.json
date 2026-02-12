@@ -16,8 +16,18 @@
       "js": ["content.js"]
     }
   ],
-  "permissions": ["storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage", "tabs", "notifications", "alarms", "identity"],
+  "host_permissions": ["https://www.googleapis.com/*"],
+  "oauth2": {
+    "client_id": "__CLIENT_ID__",
+    "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["pyung_Al_standing.webp"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   }
