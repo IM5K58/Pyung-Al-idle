@@ -5,11 +5,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnCheckMail = document.getElementById('btn-check-mail') as HTMLButtonElement;
   const btnAuth = document.getElementById('btn-auth') as HTMLButtonElement;
   const statusText = document.getElementById('status') as HTMLDivElement;
+  const coinCountEl = document.getElementById('coin-count') as HTMLSpanElement;
 
-  // 1. 초기 마스코트 상태 로드
-  const storage = await chrome.storage.local.get(['mascotEnabled']);
-  const isEnabled = storage.mascotEnabled !== false; // 기본값 true
+  // 1. 초기 마스코트 상태 및 코인 로드
+  const storage = await chrome.storage.local.get(['mascotEnabled', 'pyungAlCoins']);
+  const isEnabled = storage.mascotEnabled !== false;
   toggleMascot.checked = isEnabled;
+  coinCountEl.textContent = (storage.pyungAlCoins || 0).toString();
 
   // 2. 마스코트 토글 이벤트
   toggleMascot.addEventListener('change', async () => {

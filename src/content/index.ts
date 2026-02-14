@@ -79,6 +79,39 @@ class Character {
     this.showTempBubble('안녕! 반가워 삐약!');
   }
 
+  private async collectCoin() {
+    const storage = await chrome.storage.local.get(['pyungAlCoins']);
+    const currentCoins = storage.pyungAlCoins || 0;
+    const newCoins = currentCoins + 1;
+    await chrome.storage.local.set({ pyungAlCoins: newCoins });
+    
+    this.showCoinEffect();
+  }
+
+  private showCoinEffect() {
+    const coinEffect = document.createElement('div');
+    coinEffect.textContent = '💰 +1';
+    coinEffect.style.position = 'absolute';
+    coinEffect.style.top = '-30px';
+    coinEffect.style.left = '50%';
+    coinEffect.style.transform = 'translateX(-50%)';
+    coinEffect.style.color = '#ffd700';
+    coinEffect.style.fontWeight = 'bold';
+    coinEffect.style.fontSize = '18px';
+    coinEffect.style.textShadow = '1px 1px 2px rgba(0,0,0,0.5)';
+    coinEffect.style.pointerEvents = 'none';
+    coinEffect.style.transition = 'all 1s ease-out';
+    coinEffect.style.zIndex = '1000001';
+    
+    this.container.appendChild(coinEffect);
+    
+    setTimeout(() => {
+      coinEffect.style.top = '-60px';
+      coinEffect.style.opacity = '0';
+      setTimeout(() => coinEffect.remove(), 1000);
+    }, 50);
+  }
+
   private showTempBubble(text: string) {
     if (this.bubbleEl) this.bubbleEl.remove();
 
@@ -196,6 +229,11 @@ class Character {
 
     this.isIdle = false;
     this.el.classList.add('pyung-al-walking');
+
+    // 이동을 시작할 때 가끔 코인 줍기 (이동 후 멈출 때 시각적으로 표시됨)
+    if (Math.random() < 0.05) { // 5% 확률
+      setTimeout(() => this.collectCoin(), 1000);
+    }
     
     // 화면 하단 영역(바닥 쪽)에서만 이동 목표 설정
     const padding = 50;
