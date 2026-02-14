@@ -66,4 +66,5 @@ npm run build
 ---
 
 **Happy Idling with PyungAl!** 🐥
+<img width="90" height="90" alt="image" src="https://github.com/user-attachments/assets/709d46c6-8fa0-43b5-90f0-5cf07903430d" />
 
