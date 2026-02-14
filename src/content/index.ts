@@ -12,14 +12,15 @@ class Character {
   private isIdle: boolean = false;
   private isNotifying: boolean = false;
   private idlePhrases: string[] = [
-    '배고파 삐약..',
-    '오늘 날씨 좋다 삐약!',
-    '졸려 삐약.. (Zzz)',
-    '나랑 놀자 삐약!',
-    '삐약삐약!',
-    '주인님 메일 왔나? 삐약',
-    '심심해 삐약..',
-    '운동 중 삐약! 하나 둘!'
+    '아이고.. 뜨끈한 국밥 한 그릇 생각나네..',
+    '허허, 날씨 보소.. 산에 가기 딱 좋구먼.',
+    '아이고 허리야.. 잠깐 눈 좀 붙여야겠네.',
+    '심심한데 나랑 말동무나 좀 해주게나.',
+    '허허허, 인생 뭐 있나~ 다 그런 거지.',
+    '자네, 메일 왔는지 확인은 해봤나?',
+    '에휴.. 퇴근까지 몇 시간 남았나?',
+    '영차! 영차! 아이고 삭신이야..',
+    '나 때는 말이야.. 어? 이런 건 일도 아니었어.'
   ];
 
   constructor() {
@@ -76,7 +77,7 @@ class Character {
     }, 200);
 
     // 말풍선 인사
-    this.showTempBubble('안녕! 반가워 삐약!');
+    this.showTempBubble('허허, 반갑구먼! 무슨 일인가?');
   }
 
   private async collectCoin() {
@@ -283,7 +284,7 @@ class Character {
 
     this.bubbleEl = document.createElement('div');
     this.bubbleEl.className = 'pyung-al-bubble';
-    this.bubbleEl.innerHTML = `<div>📩 메일이 왔어요!</div><div style="font-size: 11px; font-weight: normal; color: #666; margin-top: 2px; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${subject}</div>`;
+    this.bubbleEl.innerHTML = `<div>📩 어이, 메일 왔네!</div><div style="font-size: 11px; font-weight: normal; color: #666; margin-top: 2px; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${subject}</div>`;
     
     this.container.insertBefore(this.bubbleEl, this.el);
 
