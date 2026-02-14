@@ -126,4 +126,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   updateAuthStatus();
+
+  // 6. 실시간 코인 동기화 (저장소 변경 감지)
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes.pyungAlCoins) {
+      coins = changes.pyungAlCoins.newValue;
+      updateCoinDisplay(coins);
+      updateShopButtons(ownedItems, coins);
+    }
+    if (areaName === 'local' && changes.ownedItems) {
+      ownedItems = changes.ownedItems.newValue;
+      updateShopButtons(ownedItems, coins);
+    }
+  });
 });
