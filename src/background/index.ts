@@ -39,11 +39,18 @@ async function checkGmailAPI() {
 
     if (data.resultSizeEstimate > 0) {
       // 마스코트가 활성화되어 있는지 확인
-      const storage = await chrome.storage.local.get(['mascotEnabled']);
+      const storage = await chrome.storage.local.get(['mascotEnabled', 'lastNotifiedId']);
       if (storage.mascotEnabled === false) return;
 
-      // 가장 최근 메일 한 건의 정보 가져오기 (선택사항)
       const lastMessageId = data.messages[0].id;
+      
+      // 이미 알림을 보낸 메일이면 패스
+      if (storage.lastNotifiedId === lastMessageId) {
+        console.log('Already notified about this message:', lastMessageId);
+        return;
+      }
+
+      // 가장 최근 메일 한 건의 정보 가져오기
       const msgResponse = await fetch(
         `https://www.googleapis.com/gmail/v1/users/me/messages/${lastMessageId}`,
         {
@@ -52,6 +59,9 @@ async function checkGmailAPI() {
       );
       const msgData = await msgResponse.json();
       const subject = msgData.payload.headers.find((h: any) => h.name === 'Subject')?.value || '제목 없음';
+
+      // 알림 완료 후 ID 저장
+      await chrome.storage.local.set({ lastNotifiedId: lastMessageId });
 
       // 컨텐츠 스크립트로 알림 전송
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
