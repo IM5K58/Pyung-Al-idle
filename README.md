@@ -1,4 +1,4 @@
-# 🐣 PyungAl Idle Extension
+# 🐣 PyungAl (퓽알) Idle Extension
 
 > **웹 페이지를 떠다니는 퓽알이와 행복한 시간을 보내보세요~!**
 

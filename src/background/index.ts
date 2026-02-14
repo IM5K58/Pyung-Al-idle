@@ -83,7 +83,7 @@ async function checkGmailAPI() {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('PyungAl Gmail Integrated Extension installed');
+  console.log('PyungAl (퓽알) Gmail Integrated Extension installed');
 });
 
 // 메시지 리스너 추가

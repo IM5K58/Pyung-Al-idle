@@ -26,7 +26,7 @@ class Character {
   ];
 
   constructor() {
-    console.log('PyungAl: Initializing character...');
+    console.log('PyungAl (퓽알): Initializing character...');
     // 컨테이너 생성 (캐릭터와 말풍선을 묶음)
     this.container = document.createElement('div');
     this.container.id = 'pyung-al-container';
@@ -183,6 +183,13 @@ class Character {
     if (this.ownedItems.includes('item-ribbon')) {
       this.container.classList.add('has-ribbon');
     }
+
+    // 4. 네잎클로버 (행운의 기운)
+    if (this.ownedItems.includes('item-lucky')) {
+      this.container.classList.add('has-lucky');
+    } else {
+      this.container.classList.remove('has-lucky');
+    }
   }
 
   public setVisible(visible: boolean) {
@@ -314,7 +321,8 @@ class Character {
     this.el.classList.add('pyung-al-walking');
 
     // 이동을 시작할 때 가끔 코인 줍기 (이동 후 멈출 때 시각적으로 표시됨)
-    if (Math.random() < 0.05) { // 5% 확률
+    const coinChance = this.ownedItems.includes('item-lucky') ? 0.10 : 0.05;
+    if (Math.random() < coinChance) {
       setTimeout(() => this.collectCoin(), 1000);
     }
     
