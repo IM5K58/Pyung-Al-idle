@@ -4,6 +4,7 @@ class Character {
   private container: HTMLDivElement;
   private el: HTMLImageElement;
   private bubbleEl: HTMLDivElement | null = null;
+  private zzzEl: HTMLDivElement | null = null;
   private x: number = 100;
   private y: number = 100;
   private targetX: number = 100;
@@ -71,6 +72,14 @@ class Character {
   private onClicked() {
     if (this.isNotifying) return;
     
+    // 자고 있었다면 깨우기
+    if (this.isIdle) {
+      this.stopZzz();
+      this.el.classList.remove('pyung-al-resting');
+      this.showTempBubble('앗! 깜빡 졸았구먼! 무슨 일인가?');
+      return;
+    }
+    
     // 점프 애니메이션 효과
     this.el.style.transform += ' translateY(-20px)';
     setTimeout(() => {
@@ -112,6 +121,21 @@ class Character {
       coinEffect.style.opacity = '0';
       setTimeout(() => coinEffect.remove(), 1000);
     }, 50);
+  }
+
+  private showZzz() {
+    if (this.zzzEl) return;
+    this.zzzEl = document.createElement('div');
+    this.zzzEl.className = 'pyung-al-zzz';
+    this.zzzEl.textContent = 'Zzz';
+    this.container.appendChild(this.zzzEl);
+  }
+
+  private stopZzz() {
+    if (this.zzzEl) {
+      this.zzzEl.remove();
+      this.zzzEl = null;
+    }
   }
 
   private showTempBubble(text: string) {
@@ -179,6 +203,24 @@ class Character {
       }
       .pyung-al-walking {
         animation: pyung-al-walk 0.6s infinite ease-in-out;
+      }
+      @keyframes pyung-al-zzz {
+        0% { transform: translate(20px, 0) scale(0.5); opacity: 0; }
+        50% { transform: translate(30px, -20px) scale(1); opacity: 1; }
+        100% { transform: translate(40px, -40px) scale(0.8); opacity: 0; }
+      }
+      .pyung-al-zzz {
+        position: absolute;
+        top: 0;
+        right: 0;
+        font-weight: bold;
+        color: #555;
+        font-size: 14px;
+        animation: pyung-al-zzz 2s infinite;
+        pointer-events: none;
+      }
+      .pyung-al-resting {
+        transform: rotate(70deg) translateY(10px) !important;
       }
       .pyung-al-bubble {
         position: relative;
@@ -248,14 +290,23 @@ class Character {
     if (Math.random() < 0.3) {
       this.isIdle = true;
       this.el.classList.remove('pyung-al-walking');
+      
+      // 낮잠 자기 (휴식 상태 시각화)
+      this.el.classList.add('pyung-al-resting');
+      this.showZzz();
 
-      // 가만히 있을 때 50% 확률로 혼잣말 하기
+      // 가만히 있을 때 50% 확률로 혼잣말 하기 (잠꼬대 포함)
       if (!this.isNotifying && Math.random() < 0.5) {
-        const randomPhrase = this.idlePhrases[Math.floor(Math.random() * this.idlePhrases.length)];
+        const phrases = [...this.idlePhrases, '음냐.. 국밥.. 한 그릇..', '드르렁.. 퓽..', '아이고.. 삭신이야..'];
+        const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
         this.showTempBubble(randomPhrase);
       }
 
-      setTimeout(() => this.moveRandomly(), 2000 + Math.random() * 3000);
+      setTimeout(() => {
+        this.stopZzz();
+        this.el.classList.remove('pyung-al-resting');
+        this.moveRandomly();
+      }, 3000 + Math.random() * 4000);
       return;
     }
 
