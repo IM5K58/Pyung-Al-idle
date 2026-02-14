@@ -117,11 +117,12 @@ class Character {
     style.id = styleId;
     style.textContent = `
       @keyframes pyung-al-walk {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-5px); }
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        25% { transform: translateY(-8px) rotate(-8deg); }
+        75% { transform: translateY(-8px) rotate(8deg); }
       }
       .pyung-al-walking {
-        animation: pyung-al-walk 0.5s infinite;
+        animation: pyung-al-walk 0.6s infinite ease-in-out;
       }
       .pyung-al-bubble {
         position: relative;
