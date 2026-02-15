@@ -35,7 +35,7 @@ class Character {
     this.container.style.zIndex = '999999';
     this.container.style.pointerEvents = 'auto'; // 클릭 이벤트를 받기 위해 auto로 변경
     this.container.style.cursor = 'pointer';
-    this.container.style.display = 'flex';
+    this.container.style.display = 'none'; // 초기에는 숨김 (깜빡임 방지)
     this.container.style.flexDirection = 'column';
     this.container.style.alignItems = 'center';
     this.container.style.transition = 'transform 0.1s linear, opacity 0.3s';
@@ -170,7 +170,9 @@ class Character {
 
   private async checkInitialState() {
     const storage = await chrome.storage.local.get(['mascotEnabled', 'ownedItems']);
-    if (storage.mascotEnabled === false) {
+    if (storage.mascotEnabled !== false) {
+      this.container.style.display = 'flex';
+    } else {
       this.container.style.display = 'none';
     }
     this.ownedItems = storage.ownedItems || [];
