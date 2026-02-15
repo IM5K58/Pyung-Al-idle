@@ -55,8 +55,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // 현재 탭에 아이템 적용 알림
         const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (activeTabs[0]?.id) {
-          chrome.tabs.sendMessage(activeTabs[0].id, { type: 'UPDATE_ITEMS', ownedItems });
+        const targetTab = activeTabs[0];
+        if (targetTab?.id && targetTab.url && !targetTab.url.startsWith('chrome://')) {
+          try {
+            chrome.tabs.sendMessage(targetTab.id, { type: 'UPDATE_ITEMS', ownedItems });
+          } catch (err) {
+            console.log('Content script not ready in this tab.');
+          }
         }
       }
     });
@@ -67,22 +72,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enabled = toggleMascot.checked;
     await chrome.storage.local.set({ mascotEnabled: enabled });
     const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (activeTabs[0]?.id) {
-      chrome.tabs.sendMessage(activeTabs[0].id, { type: 'TOGGLE_MASCOT', enabled });
+    const targetTab = activeTabs[0];
+    if (targetTab?.id && targetTab.url && !targetTab.url.startsWith('chrome://')) {
+      try {
+        chrome.tabs.sendMessage(targetTab.id, { type: 'TOGGLE_MASCOT', enabled });
+      } catch (err) {
+        console.log('Content script not ready in this tab.');
+      }
     }
   });
 
   // 5. 메일 확인 버튼
   btnCheckMail.addEventListener('click', () => {
     statusText.textContent = '메일을 확인하고 있어요...';
-    chrome.runtime.sendMessage({ type: 'CHECK_MAIL_MANUAL' }, (response) => {
-      if (response?.success) {
-        statusText.textContent = '확인이 완료되었습니다!';
-      } else {
-        statusText.textContent = '확인 중 오류가 발생했습니다.';
-      }
-      setTimeout(() => updateAuthStatus(), 2000);
-    });
+    try {
+      chrome.runtime.sendMessage({ type: 'CHECK_MAIL_MANUAL' }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Runtime error:', chrome.runtime.lastError.message);
+          statusText.textContent = '배경 스크립트 연결 실패';
+          return;
+        }
+        if (response?.success) {
+          statusText.textContent = '확인이 완료되었습니다!';
+        } else {
+          statusText.textContent = '확인 중 오류가 발생했습니다.';
+        }
+        setTimeout(() => updateAuthStatus(), 2000);
+      });
+    } catch (err) {
+      console.error('Send message error:', err);
+      statusText.textContent = '메시지 전송 실패';
+    }
   });
 
   function updateCoinDisplay(count: number) {

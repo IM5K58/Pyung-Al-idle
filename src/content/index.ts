@@ -1,4 +1,5 @@
 // src/content/index.ts
+console.log('%c[PyungAl] Content script starting...', 'color: #ff9900; font-weight: bold;');
 
 class Character {
   private container: HTMLDivElement;
@@ -45,6 +46,9 @@ class Character {
     const imageUrl = chrome.runtime.getURL('pyung_Al_standing.webp');
     
     this.el.src = imageUrl;
+    this.el.onerror = () => {
+      console.error('PyungAl (퓽알): Failed to load mascot image. Path:', imageUrl);
+    };
     this.el.style.width = '80px';
     this.el.style.height = 'auto';
     this.el.style.display = 'block';
@@ -55,18 +59,25 @@ class Character {
     // 클릭 이벤트 추가
     this.container.addEventListener('click', () => this.onClicked());
 
-    if (document.body) {
-      document.body.appendChild(this.container);
-    } else {
-      window.addEventListener('DOMContentLoaded', () => {
-        document.body.appendChild(this.container);
-      });
-    }
+    // 안전하게 DOM에 추가
+    this.addToDOM();
 
     this.injectStyles();
     this.checkInitialState();
     this.moveRandomly();
     this.animate();
+  }
+
+  private addToDOM() {
+    const tryAppend = () => {
+      if (document.body) {
+        document.body.appendChild(this.container);
+        console.log('PyungAl (퓽알): Character added to DOM.');
+      } else {
+        setTimeout(tryAppend, 100);
+      }
+    };
+    tryAppend();
   }
 
   private onClicked() {
