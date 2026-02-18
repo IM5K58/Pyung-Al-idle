@@ -12,7 +12,7 @@ class Character {
   private targetX: number = 100;
   private targetY: number = 100;
   private speed: number = 1.5;
-  private ownedItems: string[] = [];
+  private equippedItems: string[] = [];
   private isIdle: boolean = false;
   private isNotifying: boolean = false;
   private animationId: number | null = null;
@@ -185,36 +185,40 @@ class Character {
   }
 
   private async checkInitialState() {
-    const storage = await chrome.storage.local.get(['mascotEnabled', 'ownedItems']);
+    const storage = await chrome.storage.local.get(['mascotEnabled', 'equippedItems']);
     if (storage.mascotEnabled !== false) {
       this.container.style.display = 'flex';
     } else {
       this.container.style.display = 'none';
     }
-    this.ownedItems = storage.ownedItems || [];
+    this.equippedItems = storage.equippedItems || [];
     this.applyItems();
   }
 
   private applyItems() {
     // 1. 축지법 장화 (속도 증가)
-    if (this.ownedItems.includes('item-speed')) {
+    if (this.equippedItems.includes('item-speed')) {
       this.speed = 3.0;
     } else {
       this.speed = 1.5;
     }
 
     // 2. 황금 아우라
-    if (this.ownedItems.includes('item-aura')) {
+    if (this.equippedItems.includes('item-aura')) {
       this.el.style.filter = 'drop-shadow(0 0 8px #ffd700)';
+    } else {
+      this.el.style.filter = 'none';
     }
 
     // 3. 빨간 리본 (CSS pseudo-element로 추가)
-    if (this.ownedItems.includes('item-ribbon')) {
+    if (this.equippedItems.includes('item-ribbon')) {
       this.container.classList.add('has-ribbon');
+    } else {
+      this.container.classList.remove('has-ribbon');
     }
 
     // 4. 네잎클로버 (행운의 기운)
-    if (this.ownedItems.includes('item-lucky')) {
+    if (this.equippedItems.includes('item-lucky')) {
       this.container.classList.add('has-lucky');
     } else {
       this.container.classList.remove('has-lucky');
@@ -358,8 +362,8 @@ class Character {
     this.isIdle = false;
     this.el.classList.add('pyung-al-walking');
 
-    // 이동을 시작할 때 가끔 코인 줍기 (이동 후 멈출 때 시각적으로 표시됨)
-    const coinChance = this.ownedItems.includes('item-lucky') ? 0.10 : 0.05;
+    // 이동을 시작할 때 가끔 코인 줍기
+    const coinChance = this.equippedItems.includes('item-lucky') ? 0.10 : 0.05;
     if (Math.random() < coinChance) {
       setTimeout(() => this.collectCoin(), 1000);
     }
@@ -482,14 +486,23 @@ chrome.runtime.onMessage.addListener((request) => {
     const pyungAl = (window as any).pyungAlInstance;
     if (!pyungAl || !chrome.runtime?.id) return;
 
-    if (request.type === 'NEW_MAIL') {
-      pyungAl.notify(request.subject);
-    } else if (request.type === 'TOGGLE_MASCOT') {
-      pyungAl.setVisible(request.enabled);
-    } else if (request.type === 'UPDATE_ITEMS') {
-      (pyungAl as any).ownedItems = request.ownedItems;
-      (pyungAl as any).applyItems();
-    }
+      if (request.type === 'NEW_MAIL') {
+
+        pyungAl.notify(request.subject);
+
+      } else if (request.type === 'TOGGLE_MASCOT') {
+
+        pyungAl.setVisible(request.enabled);
+
+      } else if (request.type === 'UPDATE_ITEMS') {
+
+        (pyungAl as any).equippedItems = request.equippedItems;
+
+        (pyungAl as any).applyItems();
+
+      }
+
+    
   } catch (err) {
     // 컨텍스트 무효화 시 무시
   }

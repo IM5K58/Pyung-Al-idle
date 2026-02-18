@@ -9,14 +9,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tabs = document.querySelectorAll('.tab');
   const buyButtons = document.querySelectorAll('.btn-buy');
 
-  // 1. 초기 로드 (상태, 코인, 보유 아이템)
-  const storage = await chrome.storage.local.get(['mascotEnabled', 'pyungAlCoins', 'ownedItems']);
+  // 1. 초기 로드 (상태, 코인, 보유 아이템, 장착 아이템)
+  const storage = await chrome.storage.local.get(['mascotEnabled', 'pyungAlCoins', 'ownedItems', 'equippedItems']);
   let coins = storage.pyungAlCoins || 0;
   let ownedItems = storage.ownedItems || [];
+  let equippedItems = storage.equippedItems || [];
   
   toggleMascot.checked = storage.mascotEnabled !== false;
   updateCoinDisplay(coins);
-  updateShopButtons(ownedItems, coins);
+  updateShopButtons(ownedItems, equippedItems, coins);
 
   // 2. 탭 전환 로직
   tabs.forEach(tab => {
@@ -32,40 +33,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // 3. 상점 구매 로직
+  // 3. 상점 구매/장착 로직
   buyButtons.forEach(btn => {
     const button = btn as HTMLButtonElement;
     button.addEventListener('click', async () => {
       const itemId = button.dataset.item!;
       const price = parseInt(button.dataset.price!);
 
-      if (ownedItems.includes(itemId)) return;
+      // 이미 보유한 경우 장착/해제 토글
+      if (ownedItems.includes(itemId)) {
+        if (equippedItems.includes(itemId)) {
+          equippedItems = equippedItems.filter((id: string) => id !== itemId);
+        } else {
+          equippedItems.push(itemId);
+        }
+        await chrome.storage.local.set({ equippedItems });
+        updateShopButtons(ownedItems, equippedItems, coins);
+        sendUpdateToContentScript();
+        return;
+      }
 
+      // 구매 로직
       if (coins >= price) {
         coins -= price;
         ownedItems.push(itemId);
+        equippedItems.push(itemId); // 구매 시 자동 장착
         
         await chrome.storage.local.set({ 
           pyungAlCoins: coins, 
-          ownedItems: ownedItems 
+          ownedItems: ownedItems,
+          equippedItems: equippedItems
         });
 
         updateCoinDisplay(coins);
-        updateShopButtons(ownedItems, coins);
-        
-        // 현재 탭에 아이템 적용 알림
-        const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        const targetTab = activeTabs[0];
-        if (targetTab?.id && targetTab.url && !targetTab.url.startsWith('chrome://')) {
-          try {
-            chrome.tabs.sendMessage(targetTab.id, { type: 'UPDATE_ITEMS', ownedItems });
-          } catch (err) {
-            console.log('Content script not ready in this tab.');
-          }
-        }
+        updateShopButtons(ownedItems, equippedItems, coins);
+        sendUpdateToContentScript();
       }
     });
   });
+
+  async function sendUpdateToContentScript() {
+    const activeTabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const targetTab = activeTabs[0];
+    if (targetTab?.id && targetTab.url && !targetTab.url.startsWith('chrome://')) {
+      try {
+        chrome.tabs.sendMessage(targetTab.id, { 
+          type: 'UPDATE_ITEMS', 
+          equippedItems 
+        });
+      } catch (err) {
+        console.log('Content script not ready in this tab.');
+      }
+    }
+  }
 
   // 4. 마스코트 토글 이벤트
   toggleMascot.addEventListener('change', async () => {
@@ -109,22 +129,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     coinCountEl.textContent = count.toLocaleString();
   }
 
-  function updateShopButtons(owned: string[], currentCoins: number) {
+  function updateShopButtons(owned: string[], equipped: string[], currentCoins: number) {
     buyButtons.forEach(btn => {
       const button = btn as HTMLButtonElement;
       const itemId = button.dataset.item!;
       const price = parseInt(button.dataset.price!);
 
       if (owned.includes(itemId)) {
-        button.textContent = '보유함';
-        button.disabled = true;
-        button.classList.add('owned');
+        if (equipped.includes(itemId)) {
+          button.textContent = '장착 중';
+          button.classList.add('equipped');
+          button.classList.remove('owned');
+        } else {
+          button.textContent = '장착';
+          button.classList.remove('equipped');
+          button.classList.add('owned');
+        }
+        button.disabled = false;
       } else if (currentCoins < price) {
         button.disabled = true;
         button.textContent = '코인 부족';
+        button.classList.remove('owned', 'equipped');
       } else {
         button.disabled = false;
         button.textContent = '구매';
+        button.classList.remove('owned', 'equipped');
       }
     });
   }
@@ -147,16 +176,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   updateAuthStatus();
 
-  // 6. 실시간 코인 동기화 (저장소 변경 감지)
+  // 6. 실시간 코인 및 아이템 동기화 (저장소 변경 감지)
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local' && changes.pyungAlCoins) {
-      coins = changes.pyungAlCoins.newValue;
+    if (areaName === 'local') {
+      if (changes.pyungAlCoins) {
+        coins = changes.pyungAlCoins.newValue;
+      }
+      if (changes.ownedItems) {
+        ownedItems = changes.ownedItems.newValue;
+      }
+      if (changes.equippedItems) {
+        equippedItems = changes.equippedItems.newValue;
+      }
       updateCoinDisplay(coins);
-      updateShopButtons(ownedItems, coins);
-    }
-    if (areaName === 'local' && changes.ownedItems) {
-      ownedItems = changes.ownedItems.newValue;
-      updateShopButtons(ownedItems, coins);
+      updateShopButtons(ownedItems, equippedItems, coins);
     }
   });
 });
