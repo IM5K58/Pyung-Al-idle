@@ -1,7 +1,11 @@
 // src/content/index.ts
 console.log('%c[PyungAl] Content script starting...', 'color: #ff9900; font-weight: bold;');
 
-class Character {
+// 메인 프레임(Top window)에서만 실행되도록 제한 (광고 등 iframe 방지)
+if (window.top !== window.self) {
+  console.log('[PyungAl] In an iframe, skipping initialization.');
+} else {
+  class Character {
   private container: HTMLDivElement;
   private spriteWrapper: HTMLDivElement;
   private el: HTMLImageElement;
@@ -447,7 +451,10 @@ class Character {
   private destroy() {
     if (this.animationId) cancelAnimationFrame(this.animationId);
     this.container.remove();
-    console.log('%c[PyungAl] Instance destroyed due to context invalidation.', 'color: #ccc;');
+    if (document.body) {
+      delete document.body.dataset.pyungAlActive;
+    }
+    console.log('%c[PyungAl] Instance destroyed.', 'color: #ccc;');
   }
 
   public notify(subject: string) {
@@ -483,12 +490,28 @@ class Character {
 
 // 초기화 보장 (중복 실행 방지 및 최신화)
 const init = () => {
+  // 1. 이미 메인 프레임에 활성화된 데이터 속성이 있는지 확인 (가장 확실한 방법)
+  if (document.body && document.body.dataset.pyungAlActive === 'true') {
+    console.log('[PyungAl] Already active on this page, skipping.');
+    return;
+  }
+
   const existing = document.getElementById('pyung-al-container');
   if (existing) {
-    existing.remove(); // 이전 버전 제거하고 새 버전으로 교체
+    existing.remove();
   }
   
+  // 기존 인스턴스 정지 로직 (있다면)
+  if ((window as any).pyungAlInstance && typeof (window as any).pyungAlInstance.destroy === 'function') {
+    (window as any).pyungAlInstance.destroy();
+  }
+
   (window as any).pyungAlInstance = new Character();
+  
+  // 활성화 표시 남기기
+  if (document.body) {
+    document.body.dataset.pyungAlActive = 'true';
+  }
 };
 
 if (document.readyState === 'loading') {
@@ -503,24 +526,16 @@ chrome.runtime.onMessage.addListener((request) => {
     const pyungAl = (window as any).pyungAlInstance;
     if (!pyungAl || !chrome.runtime?.id) return;
 
-      if (request.type === 'NEW_MAIL') {
-
-        pyungAl.notify(request.subject);
-
-      } else if (request.type === 'TOGGLE_MASCOT') {
-
-        pyungAl.setVisible(request.enabled);
-
-      } else if (request.type === 'UPDATE_ITEMS') {
-
-        (pyungAl as any).equippedItems = request.equippedItems;
-
-        (pyungAl as any).applyItems();
-
-      }
-
-    
+    if (request.type === 'NEW_MAIL') {
+      pyungAl.notify(request.subject);
+    } else if (request.type === 'TOGGLE_MASCOT') {
+      pyungAl.setVisible(request.enabled);
+    } else if (request.type === 'UPDATE_ITEMS') {
+      (pyungAl as any).equippedItems = request.equippedItems;
+      (pyungAl as any).applyItems();
+    }
   } catch (err) {
     // 컨텍스트 무효화 시 무시
   }
 });
+}
