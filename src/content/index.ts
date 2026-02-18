@@ -245,18 +245,18 @@ class Character {
         animation: pyung-al-walk 0.6s infinite ease-in-out;
       }
       @keyframes pyung-al-zzz {
-        0% { transform: translate(20px, 0) scale(0.5); opacity: 0; }
-        50% { transform: translate(30px, -20px) scale(1); opacity: 1; }
-        100% { transform: translate(40px, -40px) scale(0.8); opacity: 0; }
+        0% { transform: translate(10px, -5px) scale(0.5); opacity: 0; }
+        50% { transform: translate(20px, -20px) scale(1.1); opacity: 1; }
+        100% { transform: translate(25px, -35px) scale(0.9); opacity: 0; }
       }
       .pyung-al-zzz {
         position: absolute;
-        top: 0;
-        right: 0;
+        top: 10px; /* 몸쪽으로 더 내림 */
+        right: 5px; /* 몸쪽으로 더 붙임 */
         font-weight: bold;
-        color: #555;
+        color: #777;
         font-size: 14px;
-        animation: pyung-al-zzz 2s infinite;
+        animation: pyung-al-zzz 2.5s infinite;
         pointer-events: none;
       }
       .pyung-al-resting {
