@@ -15,6 +15,7 @@ class Character {
   private ownedItems: string[] = [];
   private isIdle: boolean = false;
   private isNotifying: boolean = false;
+  private animationId: number | null = null;
   private idlePhrases: string[] = [
     '아이고.. 뜨끈한 국밥 한 그릇 생각나네..',
     '허허, 날씨 보소.. 산에 가기 딱 좋구먼.',
@@ -37,9 +38,12 @@ class Character {
     this.container.style.pointerEvents = 'auto';
     this.container.style.cursor = 'pointer';
     this.container.style.display = 'none';
-    this.container.style.left = `${this.x}px`;
-    this.container.style.top = `${this.y}px`;
+    this.container.style.left = '0';
+    this.container.style.top = '0';
+    this.container.style.transform = `translate(${Math.round(this.x)}px, ${Math.round(this.y)}px)`;
     this.container.style.transition = 'opacity 0.3s';
+    this.container.style.backfaceVisibility = 'hidden'; // 렌더링 떨림 방지
+    this.container.style.webkitBackfaceVisibility = 'hidden';
 
     // 스프라이트 래퍼 (좌우 반전 담당)
     this.spriteWrapper = document.createElement('div');
@@ -47,7 +51,8 @@ class Character {
     this.spriteWrapper.style.display = 'flex';
     this.spriteWrapper.style.flexDirection = 'column';
     this.spriteWrapper.style.alignItems = 'center';
-    this.spriteWrapper.style.transition = 'transform 0.2s ease-out';
+    // spriteWrapper의 transition도 제거하여 animate()와 충돌 방지
+    this.spriteWrapper.style.transition = 'none'; 
 
     this.el = document.createElement('img');
     const imageUrl = chrome.runtime.getURL('pyung_Al_standing.webp');
@@ -374,27 +379,54 @@ class Character {
   }
 
   private animate() {
+    // 1. 컨텍스트 유효성 체크 (익스텐션 재로드 시 루프 중단)
+    if (!chrome.runtime?.id) {
+      this.destroy();
+      return;
+    }
+
+    // 2. 이전 프레임 루프가 있다면 취소
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+    }
+
     if (!this.isIdle && !this.isNotifying) {
       const dx = this.targetX - this.x;
       const dy = this.targetY - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist > 1) {
-        this.x += (dx / dist) * this.speed;
-        this.y += (dy / dist) * this.speed;
+      // 2px 이내면 도착한 것으로 간주 (진동 방지)
+      if (dist > 2) {
+        // 이동할 거리(speed)가 남은 거리(dist)보다 크면 오버슈트 방지를 위해 목표 지점으로 스냅
+        const moveDist = Math.min(this.speed, dist);
+        this.x += (dx / dist) * moveDist;
+        this.y += (dy / dist) * moveDist;
         
-        this.container.style.left = `${this.x}px`;
-        this.container.style.top = `${this.y}px`;
+        // !important를 사용하여 외부 CSS 간섭 차단
+        this.container.style.setProperty('transform', `translate(${Math.round(this.x)}px, ${Math.round(this.y)}px)`, 'important');
         
-        // 이동 방향에 따라 좌우 반전 (래퍼 조작)
+        // 이동 방향에 따라 좌우 반전
         const scaleX = dx > 0 ? -1 : 1;
-        this.spriteWrapper.style.transform = `scaleX(${scaleX})`;
+        this.spriteWrapper.style.setProperty('transform', `scaleX(${scaleX})`, 'important');
       } else {
+        // 목표 도착 시 정확히 좌표 일치시킴
+        this.x = this.targetX;
+        this.y = this.targetY;
+        this.container.style.setProperty('transform', `translate(${Math.round(this.x)}px, ${Math.round(this.y)}px)`, 'important');
         this.el.classList.remove('pyung-al-walking');
       }
+    } else {
+      // Idle 상태 좌표 고정
+      this.container.style.setProperty('transform', `translate(${Math.round(this.x)}px, ${Math.round(this.y)}px)`, 'important');
     }
 
-    requestAnimationFrame(() => this.animate());
+    this.animationId = requestAnimationFrame(() => this.animate());
+  }
+
+  private destroy() {
+    if (this.animationId) cancelAnimationFrame(this.animationId);
+    this.container.remove();
+    console.log('%c[PyungAl] Instance destroyed due to context invalidation.', 'color: #ccc;');
   }
 
   public notify(subject: string) {
@@ -428,9 +460,13 @@ class Character {
   }
 }
 
-// 초기화 보장
+// 초기화 보장 (중복 실행 방지 및 최신화)
 const init = () => {
-  if (window.hasOwnProperty('pyungAlInstance')) return;
+  const existing = document.getElementById('pyung-al-container');
+  if (existing) {
+    existing.remove(); // 이전 버전 제거하고 새 버전으로 교체
+  }
+  
   (window as any).pyungAlInstance = new Character();
 };
 
@@ -440,17 +476,21 @@ if (document.readyState === 'loading') {
   init();
 }
 
-// 백그라운드로부터 메시지 수신
+// 백그라운드로부터 메시지 수신 (예외 처리 강화)
 chrome.runtime.onMessage.addListener((request) => {
-  const pyungAl = (window as any).pyungAlInstance;
-  if (!pyungAl) return;
+  try {
+    const pyungAl = (window as any).pyungAlInstance;
+    if (!pyungAl || !chrome.runtime?.id) return;
 
-  if (request.type === 'NEW_MAIL') {
-    pyungAl.notify(request.subject);
-  } else if (request.type === 'TOGGLE_MASCOT') {
-    pyungAl.setVisible(request.enabled);
-  } else if (request.type === 'UPDATE_ITEMS') {
-    (pyungAl as any).ownedItems = request.ownedItems;
-    (pyungAl as any).applyItems();
+    if (request.type === 'NEW_MAIL') {
+      pyungAl.notify(request.subject);
+    } else if (request.type === 'TOGGLE_MASCOT') {
+      pyungAl.setVisible(request.enabled);
+    } else if (request.type === 'UPDATE_ITEMS') {
+      (pyungAl as any).ownedItems = request.ownedItems;
+      (pyungAl as any).applyItems();
+    }
+  } catch (err) {
+    // 컨텍스트 무효화 시 무시
   }
 });
