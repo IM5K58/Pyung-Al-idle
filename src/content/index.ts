@@ -3,6 +3,7 @@ console.log('%c[PyungAl] Content script starting...', 'color: #ff9900; font-weig
 
 class Character {
   private container: HTMLDivElement;
+  private spriteWrapper: HTMLDivElement;
   private el: HTMLImageElement;
   private bubbleEl: HTMLDivElement | null = null;
   private zzzEl: HTMLDivElement | null = null;
@@ -28,19 +29,25 @@ class Character {
 
   constructor() {
     console.log('PyungAl (퓽알): Initializing character...');
-    // 컨테이너 생성 (캐릭터와 말풍선을 묶음)
+    // 컨테이너 생성 (전체 요소를 묶음)
     this.container = document.createElement('div');
     this.container.id = 'pyung-al-container';
     this.container.style.position = 'fixed';
     this.container.style.zIndex = '999999';
-    this.container.style.pointerEvents = 'auto'; // 클릭 이벤트를 받기 위해 auto로 변경
+    this.container.style.pointerEvents = 'auto';
     this.container.style.cursor = 'pointer';
-    this.container.style.display = 'none'; // 초기에는 숨김 (깜빡임 방지)
-    this.container.style.flexDirection = 'column';
-    this.container.style.alignItems = 'center';
-    this.container.style.transition = 'transform 0.1s linear, opacity 0.3s';
+    this.container.style.display = 'none';
     this.container.style.left = `${this.x}px`;
     this.container.style.top = `${this.y}px`;
+    this.container.style.transition = 'opacity 0.3s';
+
+    // 스프라이트 래퍼 (좌우 반전 담당)
+    this.spriteWrapper = document.createElement('div');
+    this.spriteWrapper.style.position = 'relative';
+    this.spriteWrapper.style.display = 'flex';
+    this.spriteWrapper.style.flexDirection = 'column';
+    this.spriteWrapper.style.alignItems = 'center';
+    this.spriteWrapper.style.transition = 'transform 0.2s ease-out';
 
     this.el = document.createElement('img');
     const imageUrl = chrome.runtime.getURL('pyung_Al_standing.webp');
@@ -52,10 +59,14 @@ class Character {
     this.el.style.width = '80px';
     this.el.style.height = 'auto';
     this.el.style.display = 'block';
-    this.el.style.transition = 'transform 0.2s ease-out, filter 0.3s';
+    this.el.style.transition = 'filter 0.3s';
     
-    this.container.appendChild(this.el);
+    this.spriteWrapper.appendChild(this.el);
+    this.container.appendChild(this.spriteWrapper);
     
+    // 방향 처리를 위한 초기값
+    this.el.dataset.direction = '1';
+
     // 클릭 이벤트 추가
     this.container.addEventListener('click', () => this.onClicked());
 
@@ -92,10 +103,10 @@ class Character {
     }
     
     // 점프 애니메이션 효과
-    this.el.style.transform += ' translateY(-20px)';
+    this.el.classList.add('pyung-al-jumping');
     setTimeout(() => {
-      this.el.style.transform = this.el.style.transform.replace(' translateY(-20px)', '');
-    }, 200);
+      this.el.classList.remove('pyung-al-jumping');
+    }, 400);
 
     // 말풍선 인사
     this.showTempBubble('허허, 반갑구먼! 무슨 일인가?');
@@ -139,7 +150,7 @@ class Character {
     this.zzzEl = document.createElement('div');
     this.zzzEl.className = 'pyung-al-zzz';
     this.zzzEl.textContent = 'Zzz';
-    this.container.appendChild(this.zzzEl);
+    this.spriteWrapper.appendChild(this.zzzEl);
   }
 
   private stopZzz() {
@@ -156,7 +167,7 @@ class Character {
     this.bubbleEl.className = 'pyung-al-bubble';
     this.bubbleEl.textContent = text;
     
-    this.container.insertBefore(this.bubbleEl, this.el);
+    this.container.appendChild(this.bubbleEl);
     setTimeout(() => this.bubbleEl?.classList.add('visible'), 10);
 
     setTimeout(() => {
@@ -242,8 +253,18 @@ class Character {
       .pyung-al-resting {
         transform: rotate(70deg) translateY(10px) !important;
       }
+      @keyframes pyung-al-jump {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+      }
+      .pyung-al-jumping {
+        animation: pyung-al-jump 0.4s ease-out;
+      }
       .pyung-al-bubble {
-        position: relative;
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(10px);
         background: #ffffff !important;
         border: 2px solid #333 !important;
         border-radius: 15px !important;
@@ -256,14 +277,13 @@ class Character {
         white-space: nowrap !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         opacity: 0;
-        transform: translateY(10px);
         transition: opacity 0.3s, transform 0.3s;
         pointer-events: none;
         z-index: 1000000;
       }
       .pyung-al-bubble.visible {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(-50%) translateY(0);
       }
       .pyung-al-bubble::after {
         content: '';
@@ -366,9 +386,9 @@ class Character {
         this.container.style.left = `${this.x}px`;
         this.container.style.top = `${this.y}px`;
         
-        // 이동 방향에 따라 좌우 반전
+        // 이동 방향에 따라 좌우 반전 (래퍼 조작)
         const scaleX = dx > 0 ? -1 : 1;
-        this.el.style.transform = `scaleX(${scaleX})`;
+        this.spriteWrapper.style.transform = `scaleX(${scaleX})`;
       } else {
         this.el.classList.remove('pyung-al-walking');
       }
@@ -389,7 +409,7 @@ class Character {
     this.bubbleEl.className = 'pyung-al-bubble';
     this.bubbleEl.innerHTML = `<div>📩 어이, 메일 왔네!</div><div style="font-size: 11px; font-weight: normal; color: #666; margin-top: 2px; max-width: 150px; overflow: hidden; text-overflow: ellipsis;">${subject}</div>`;
     
-    this.container.insertBefore(this.bubbleEl, this.el);
+    this.container.appendChild(this.bubbleEl);
 
     setTimeout(() => this.bubbleEl?.classList.add('visible'), 10);
 
