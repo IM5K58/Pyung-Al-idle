@@ -212,16 +212,16 @@ class Character {
 
     // 3. 빨간 리본 (CSS pseudo-element로 추가)
     if (this.equippedItems.includes('item-ribbon')) {
-      this.container.classList.add('has-ribbon');
+      this.spriteWrapper.classList.add('has-ribbon');
     } else {
-      this.container.classList.remove('has-ribbon');
+      this.spriteWrapper.classList.remove('has-ribbon');
     }
 
     // 4. 네잎클로버 (행운의 기운)
     if (this.equippedItems.includes('item-lucky')) {
-      this.container.classList.add('has-lucky');
+      this.spriteWrapper.classList.add('has-lucky');
     } else {
-      this.container.classList.remove('has-lucky');
+      this.spriteWrapper.classList.remove('has-lucky');
     }
   }
 
@@ -319,11 +319,28 @@ class Character {
       .has-ribbon::before {
         content: '🎀';
         position: absolute;
-        top: 0;
-        right: 0;
-        font-size: 24px;
+        top: 5px; /* 머리 윗부분에 살짝 걸치도록 조정 */
+        left: 65%; /* 약간 오른쪽으로 치우치게 하여 자연스러움 유도 */
+        transform: translateX(-50%) rotate(15deg); /* 살짝 기울여서 핀 느낌 생성 */
+        font-size: 22px;
         z-index: 1000002;
-        transform: translate(10px, -10px);
+        pointer-events: none;
+        filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.2)); /* 미세한 그림자로 입체감 */
+      }
+      .has-lucky::after {
+        content: '🍀';
+        position: absolute;
+        top: -25px;
+        left: 70%;
+        transform: translateX(-50%);
+        font-size: 20px;
+        z-index: 1000002;
+        pointer-events: none;
+        animation: lucky-float 2s infinite ease-in-out;
+      }
+      @keyframes lucky-float {
+        0%, 100% { transform: translate(-50%, 0); }
+        50% { transform: translate(-50%, -5px); }
       }
     `;
     document.head.appendChild(style);
